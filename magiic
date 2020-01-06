@@ -1,0 +1,170 @@
+#!/bin/bash
+#=========================HEADER===========================================|
+#
+# magiic - Simple front for Slackpkg.
+#
+# Copyright (C) 2020 Jefferson 'Slackjeff' Rocha
+# Jefferson Rocha (aka Slackjeff) root@slackjeff.com.br
+#
+# LICENSE
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+#
+#==========================================================================|
+
+#==================== VARS
+PRG='magiic'
+VERSION='0.1'
+
+#==================== FUNCTIONS
+MENU() # Main menu
+{
+  the_menu=$(
+        dialog                                 \
+        --stdout                               \
+        --title "$PRG Version $VERSION."       \
+        --menu  "\nWelcome to $PRG a slackpkg front...\nselect what you need to do in the system." \
+        10 60 0                                \
+        'Mirror'  'List of Mirrors'            \
+        'Check'   'Check for system updates'   \
+        'Update'  'Update the mirror'          \
+        'Search'  'Search for a package'       \
+        'Install' 'Install a new package'      \
+        'Remove'  'Remove a package'           \
+        'Upgrade' 'Upgrade packages'
+  )
+  [[ "$?" -eq '1' ]] && exit 0
+}
+
+MIRROR()
+{
+   local mirrors='/etc/slackpkg/mirrors'
+    dialog                                   \
+        --title "$mirrors"                   \
+        --editbox "/etc/slackpkg/mirrors"    \
+        0 0 2> ${mirrors}.bkp
+    [[ $? -eq '0' ]] && { cp ${mirrors}.bkp ${mirrors}; rm ${mirrors}.bkp ;}
+}
+
+CHECK() #Check for system updates.
+{
+    dialog                                           \
+        --title "Checking for a new updates"         \
+        --infobox "Wait...I'll check for updates."   \
+        3 50
+    if slackpkg check-updates | grep -q "News on ChangeLog.txt"; then
+        dialog                               \
+            --title "News!"                  \
+            --msgbox "News on Changelog.txt" \
+            5 30
+    else
+        dialog                              \
+            --title "No news!"              \
+            --msgbox "No news is good news" \
+            5 30
+    fi
+}
+
+UPDATE() # Update mirror
+{
+    slackpkg update
+}
+
+SEARCH() # Search package
+{
+   local search=$(
+      dialog                                                    \
+        --stdout                                                \
+        --title "Search"                                        \
+        --inputbox "What package name do you want to look for?" \
+        0 50
+   )
+   slackpkg search "$search"
+   read -p "Press [ENTER] to continue." null
+
+}
+
+INSTALL() # Install package
+{
+   local install_pkg=$(
+    dialog                                                \
+        --stdout                                          \
+        --title  "Install"                                \
+        --inputbox "What package do you want to install?" \
+        0 50
+    )
+    if [[ -z "$install_pkg" ]]; then
+        dialog                                            \
+            --title "Ops!"                                \
+            --msgbox "\nYou must provide a package name." \
+            6 50
+        return 1
+    fi
+
+    slackpkg install "$install_pkg"
+}
+
+REMOVE() # Remove package
+{
+    local remove_pkg=$(
+    dialog                                                \
+        --stdout                                          \
+        --title  "Remove"                                 \
+        --inputbox "What package do you want Remove?"     \
+        0 50
+    )
+    if [[ -z "$remove_pkg" ]]; then
+        dialog                                            \
+            --title "Ops!"                                \
+            --msgbox "\nYou must provide a package name." \
+            6 50
+        return 1
+    fi
+
+    slackpkg remove "$remove_pkg"
+
+}
+
+UPGRADE()
+{
+    slackpkg upgrade-all
+}
+
+#=================== MAIN
+while true ;do
+    MENU
+    case $the_menu in
+        Mirror)
+            MIRROR
+        ;;
+        Check)
+            CHECK
+        ;;
+        Update)
+            UPDATE
+        ;;
+        Search)
+            SEARCH
+        ;;
+        Install)
+            INSTALL
+        ;;
+        Remove)
+            REMOVE
+        ;;
+        Upgrade)
+            UPGRADE
+        ;;
+    esac
+done
