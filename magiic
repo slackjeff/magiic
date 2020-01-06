@@ -21,11 +21,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 #
+# CHANGELOG
+# Please consult changelog.txt
+#
 #==========================================================================|
 
 #==================== VARS
 PRG='magiic'
-VERSION='0.1'
+VERSION='0.2'
 
 #==================== FUNCTIONS
 MENU() # Main menu
@@ -33,18 +36,25 @@ MENU() # Main menu
   the_menu=$(
         dialog                                 \
         --stdout                               \
-        --title "$PRG Version $VERSION."       \
-        --menu  "\nWelcome to $PRG a slackpkg front...\nselect what you need to do in the system." \
-        10 60 0                                \
-        'Mirror'  'List of Mirrors'            \
-        'Check'   'Check for system updates'   \
-        'Update'  'Update the mirror'          \
-        'Search'  'Search for a package'       \
-        'Install' 'Install a new package'      \
-        'Remove'  'Remove a package'           \
+        --title "Menu"                         \
+        --backtitle "$PRG Version ${VERSION}." \
+        --cancel-button "Exit"                 \
+        --help-button                          \
+        --menu  "\nWelcome to $PRG a slackpkg front...\n\nselect what you need to do in the system." \
+        10 60 0                                             \
+        'Mirror'  'List of Mirrors'                         \
+        'Check'   'Check for system updates'                \
+        'Update'  'Update the mirror'                       \
+        'Clean'   'List all unofficial packages for remove' \
+        'Search'  'Search for a package'                    \
+        'Install' 'Install a new package'                   \
+        'Remove'  'Remove a package'                        \
         'Upgrade' 'Upgrade packages'
   )
-  [[ "$?" -eq '1' ]] && exit 0
+  case $? in
+      1) exit 0          ;;
+      2) the_menu='Help' ;;
+  esac
 }
 
 MIRROR()
@@ -81,15 +91,29 @@ UPDATE() # Update mirror
     slackpkg update
 }
 
+CLEAN() # List all unofficial packages for remove.
+{
+    slackpkg clean-system
+}
+
 SEARCH() # Search package
 {
-   local search=$(
-      dialog                                                    \
-        --stdout                                                \
-        --title "Search"                                        \
-        --inputbox "What package name do you want to look for?" \
+   search=$(
+      dialog                                                      \
+        --stdout                                                  \
+        --title "Search"                                          \
+        --inputbox "What package name do you want to look for?\n" \
         0 50
    )
+   [[ "$?" -eq '1' ]] && return 0
+   if [[ -z "$search" ]]; then
+       dialog                                                       \
+           --title "Ops!"                                           \
+           --msgbox "\nYou must provide a package name for search." \
+           6 50
+       return 1
+    fi
+
    slackpkg search "$search"
    read -p "Press [ENTER] to continue." null
 
@@ -141,6 +165,53 @@ UPGRADE()
     slackpkg upgrade-all
 }
 
+HELP() # Help Button
+{
+    local MSG=$(
+cat <<EOF
+Welcome to $PRG Help.
+
+- WHAT IS ${PRG}?
+
+It's a dialog front for slackpkg! Not all slackpkg options are available here.
+$PRG is only meant to help with some simpler system tasks.
+
+More detailed options available from main menu:
+
+* Mirror
+ Open a simple dialog editor for you to change the mirrors of your system. Available in /etc/slackpkg/mirrors
+
+* Check
+ Check for updates available on the system!
+
+* Update
+ Updates the mirror.
+
+* Clean
+ lists all unofficial packages that are present in the system. Ideal for cleaning up third party
+ packages you don't use.
+
+* Search
+ Search for a package in the official repository.
+
+* Install
+ Install a new package.
+
+* Remove
+ Remove a package from your system.
+
+* Upgrade
+ Upgrade your system.
+
+EOF
+)
+
+    dialog              \
+        --title "Help"  \
+        --msgbox "$MSG" \
+        0 0
+}
+
 #=================== MAIN
 while true ;do
     MENU
@@ -154,6 +225,9 @@ while true ;do
         Update)
             UPDATE
         ;;
+        Clean)
+            CLEAN
+        ;;
         Search)
             SEARCH
         ;;
@@ -165,6 +239,9 @@ while true ;do
         ;;
         Upgrade)
             UPGRADE
+        ;;
+        Help)
+           HELP
         ;;
     esac
 done
