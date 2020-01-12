@@ -40,15 +40,15 @@ MENU() # Main menu
         --backtitle "$PRG Version ${VERSION}." \
         --cancel-button "Exit"                 \
         --help-button                          \
-        --menu  "\nWelcome to $PRG a slackpkg front...\n\nselect what you need to do in the system." \
-        10 60 0                                             \
-        'Mirror'  'List of Mirrors'                         \
-        'Check'   'Check for system updates'                \
-        'Update'  'Update the mirror'                       \
-        'Clean'   'List all unofficial packages for remove' \
-        'Search'  'Search for a package'                    \
-        'Install' 'Install a new package'                   \
-        'Remove'  'Remove a package'                        \
+        --menu  "\nWelcome to $PRG, a slackpkg frontend...\n\nSelect one of the following operations:" \
+        10 60 0                                              \
+        'Mirror'  'List of mirrors'                          \
+        'Check'   'Check for system updates'                 \
+        'Update'  'Update the mirror'                        \
+        'Clean'   'List all unofficial packages for removal' \
+        'Search'  'Search for a package'                     \
+        'Install' 'Install a new package'                    \
+        'Remove'  'Remove a package'                         \
         'Upgrade' 'Upgrade packages'
   )
   case $? in
@@ -69,19 +69,19 @@ MIRROR()
 
 CHECK() #Check for system updates.
 {
-    dialog                                           \
-        --title "Checking for a new updates"         \
-        --infobox "Wait...I'll check for updates."   \
+    dialog                                                 \
+        --title "Checking for a new updates"               \
+        --infobox "Please wait: checking for updates..."   \
         3 50
     if slackpkg check-updates | grep -q "News on ChangeLog.txt"; then
         dialog                               \
             --title "News!"                  \
-            --msgbox "News on Changelog.txt" \
+            --msgbox "Updates to Changelog.txt..." \
             5 30
     else
         dialog                              \
             --title "No news!"              \
-            --msgbox "No news is good news" \
+            --msgbox "No updates to ChangeLog.txt..." \
             5 30
     fi
 }
@@ -102,14 +102,14 @@ SEARCH() # Search package
       dialog                                                      \
         --stdout                                                  \
         --title "Search"                                          \
-        --inputbox "What package name do you want to look for?\n" \
+        --inputbox "What package name do you want to find?\n" \
         0 50
    )
    [[ "$?" -eq '1' ]] && return 0
    if [[ -z "$search" ]]; then
        dialog                                                       \
-           --title "Ops!"                                           \
-           --msgbox "\nYou must provide a package name for search." \
+           --title "Oops!"                                           \
+           --msgbox "\nYou must provide a package name to search." \
            6 50
        return 1
     fi
@@ -130,7 +130,7 @@ INSTALL() # Install package
     )
     if [[ -z "$install_pkg" ]]; then
         dialog                                            \
-            --title "Ops!"                                \
+            --title "Oops!"                                \
             --msgbox "\nYou must provide a package name." \
             6 50
         return 1
@@ -145,12 +145,12 @@ REMOVE() # Remove package
     dialog                                                \
         --stdout                                          \
         --title  "Remove"                                 \
-        --inputbox "What package do you want Remove?"     \
+        --inputbox "What package do you want to remove?"  \
         0 50
     )
     if [[ -z "$remove_pkg" ]]; then
         dialog                                            \
-            --title "Ops!"                                \
+            --title "Oops!"                                \
             --msgbox "\nYou must provide a package name." \
             6 50
         return 1
@@ -173,22 +173,22 @@ Welcome to $PRG Help.
 
 - WHAT IS ${PRG}?
 
-It's a dialog front for slackpkg! Not all slackpkg options are available here.
+It's a dialog frontend for slackpkg! Not all slackpkg options are available here.
 $PRG is only meant to help with some simpler system tasks.
 
 More detailed options available from main menu:
 
 * Mirror
- Open a simple dialog editor for you to change the mirrors of your system. Available in /etc/slackpkg/mirrors
+ Opens a simple dialog editor for you to change the mirrors of your system. Available in /etc/slackpkg/mirrors
 
 * Check
- Check for updates available on the system!
+ Checks for updates available on the syste
 
 * Update
  Updates the mirror.
 
 * Clean
- lists all unofficial packages that are present in the system. Ideal for cleaning up third party
+ Lists all unofficial packages that are present on the system. Ideal for cleaning up third party
  packages you don't use.
 
 * Search
