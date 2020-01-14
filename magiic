@@ -1,7 +1,7 @@
 #!/bin/bash
 #=========================HEADER===========================================|
 #
-# magiic - Simple front for Slackpkg.
+# magiic - Simple frontend for Slackpkg.
 #
 # Copyright (C) 2020 Jefferson 'Slackjeff' Rocha
 # Jefferson Rocha (aka Slackjeff) root@slackjeff.com.br
@@ -22,44 +22,52 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 #
 # CHANGELOG
-# Please consult changelog.txt
-#
+# Check changelog.txt
 #==========================================================================|
 
 #==================== VARS
 PRG='magiic'
-VERSION='0.2'
+VERSION='0.3'
 
 #==================== FUNCTIONS
 MENU() # Main menu
 {
+  # if exist, remove lock.
+  rm /var/lock/slackpkg* &>/dev/null
+
   the_menu=$(
         dialog                                 \
         --stdout                               \
         --title "Menu"                         \
         --backtitle "$PRG Version ${VERSION}." \
         --cancel-button "Exit"                 \
-        --help-button                          \
         --menu  "\nWelcome to $PRG, a slackpkg frontend...\n\nSelect one of the following operations:" \
-        10 60 0                                              \
-        'Mirror'  'List of mirrors'                          \
-        'Check'   'Check for system updates'                 \
-        'Update'  'Update the mirror'                        \
-        'Clean'   'List all unofficial packages for removal' \
-        'Search'  'Search for a package'                     \
-        'Install' 'Install a new package'                    \
-        'Remove'  'Remove a package'                         \
-        'Upgrade' 'Upgrade packages'
+        10 60 0                                                \
+        'Mirror'    'List of mirrors'                          \
+        'Check'     'Check for system updates'                 \
+        'Update'    'Update the mirror'                        \
+        'Clean'     'List all unofficial packages for removal' \
+        'Info'      'Check package information'                \
+        'Search'    'Search for a package'                     \
+        'Install'   'Install a new package'                    \
+        'Reinstall' 'Reinstall package'                        \
+        'Remove'    'Remove a package'                         \
+        'Upgrade'   'Upgrade packages'
   )
   case $? in
       1) exit 0          ;;
-      2) the_menu='Help' ;;
   esac
 }
 
-MIRROR()
+ENTER() # Press enter for some situations
 {
-   local mirrors='/etc/slackpkg/mirrors'
+    read -p "Press [ENTER] to continue." null
+    return 0
+}
+
+MIRROR() # view and edit mirrors
+{
+    local mirrors='/etc/slackpkg/mirrors'
     dialog                                   \
         --title "$mirrors"                   \
         --editbox "/etc/slackpkg/mirrors"    \
@@ -82,7 +90,7 @@ CHECK() #Check for system updates.
         dialog                              \
             --title "No news!"              \
             --msgbox "No updates to ChangeLog.txt..." \
-            5 30
+            5 40
     fi
 }
 
@@ -96,27 +104,65 @@ CLEAN() # List all unofficial packages for remove.
     slackpkg clean-system
 }
 
+INFO()
+{
+    local tmp_archive=$(mktemp)
+    local tmp_archive_head=$(mktemp) # no strangers characters.
+
+    info_package=$(
+      dialog                                                       \
+        --stdout                                                   \
+        --title "Info"                                             \
+        --inputbox "What package name do you want to show info?\n" \
+        0 60
+   )
+   [[ "$?" -eq '1' ]] && return 0
+   if [[ -z "$info_package" ]]; then
+       dialog                                                         \
+           --title "Oops!"                                            \
+           --msgbox "\nYou must provide a package name to show info." \
+           6 50
+       return 1
+    fi
+   # Capture info
+   slackpkg info "$info_package" > "$tmp_archive"
+   if grep -q "No packages found! Try:" $tmp_archive; then
+       dialog                                                                  \
+           --title "Oops!"                                                     \
+           --msgbox "\nNo packages found!.\nChoose one (and ONLY one package)" \
+           8 40
+       rm $tmp_archive
+       return 1
+   fi
+   #strangers characters remove.
+   head -n -1 $tmp_archive > $tmp_archive_head
+   dialog                       \
+   --title "Info $info_package" \
+   --textbox $tmp_archive_head  \
+   0 0
+   rm $tmp_archive $tmp_archive_head
+}
+
 SEARCH() # Search package
 {
    search=$(
       dialog                                                      \
         --stdout                                                  \
         --title "Search"                                          \
-        --inputbox "What package name do you want to find?\n" \
+        --inputbox "What package name do you want to find?\n"     \
         0 50
    )
    [[ "$?" -eq '1' ]] && return 0
    if [[ -z "$search" ]]; then
-       dialog                                                       \
-           --title "Oops!"                                           \
+       dialog                                                      \
+           --title "Oops!"                                         \
            --msgbox "\nYou must provide a package name to search." \
            6 50
        return 1
     fi
 
    slackpkg search "$search"
-   read -p "Press [ENTER] to continue." null
-
+   ENTER
 }
 
 INSTALL() # Install package
@@ -130,13 +176,36 @@ INSTALL() # Install package
     )
     if [[ -z "$install_pkg" ]]; then
         dialog                                            \
-            --title "Oops!"                                \
+            --title "Oops!"                               \
             --msgbox "\nYou must provide a package name." \
             6 50
         return 1
     fi
 
     slackpkg install "$install_pkg"
+    ENTER
+}
+
+REINSTALL() # Reinstall package(s)
+{
+    local reinstall_pkg=$(
+    dialog                                                  \
+        --stdout                                            \
+        --title  "Reinstall"                                \
+        --inputbox "What package do you want to reinstall?" \
+        0 50
+    )
+    if [[ -z "$reinstall_pkg" ]]; then
+        dialog                                            \
+            --title "Oops!"                               \
+            --msgbox "\nYou must provide a package name." \
+            6 50
+        return 1
+    fi
+
+    slackpkg reinstall "$reinstall_pkg"
+    ENTER
+
 }
 
 REMOVE() # Remove package
@@ -150,67 +219,23 @@ REMOVE() # Remove package
     )
     if [[ -z "$remove_pkg" ]]; then
         dialog                                            \
-            --title "Oops!"                                \
+            --title "Oops!"                               \
             --msgbox "\nYou must provide a package name." \
             6 50
         return 1
     fi
 
     slackpkg remove "$remove_pkg"
+    ENTER
 
 }
 
 UPGRADE()
 {
     slackpkg upgrade-all
+    ENTER
 }
 
-HELP() # Help Button
-{
-    local MSG=$(
-cat <<EOF
-Welcome to $PRG Help.
-
-- WHAT IS ${PRG}?
-
-It's a dialog frontend for slackpkg! Not all slackpkg options are available here.
-$PRG is only meant to help with some simpler system tasks.
-
-More detailed options available from main menu:
-
-* Mirror
- Opens a simple dialog editor for you to change the mirrors of your system. Available in /etc/slackpkg/mirrors
-
-* Check
- Checks for updates available on the syste
-
-* Update
- Updates the mirror.
-
-* Clean
- Lists all unofficial packages that are present on the system. Ideal for cleaning up third party
- packages you don't use.
-
-* Search
- Search for a package in the official repository.
-
-* Install
- Install a new package.
-
-* Remove
- Remove a package from your system.
-
-* Upgrade
- Upgrade your system.
-
-EOF
-)
-
-    dialog              \
-        --title "Help"  \
-        --msgbox "$MSG" \
-        0 0
-}
 
 #=================== MAIN
 while true ;do
@@ -228,20 +253,23 @@ while true ;do
         Clean)
             CLEAN
         ;;
+        Info)
+            INFO
+        ;;
         Search)
             SEARCH
         ;;
         Install)
             INSTALL
         ;;
+        Reinstall)
+            REINSTALL
+        ;;
         Remove)
             REMOVE
         ;;
         Upgrade)
             UPGRADE
-        ;;
-        Help)
-           HELP
         ;;
     esac
 done
