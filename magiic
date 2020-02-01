@@ -27,7 +27,7 @@
 
 #==================== VARS
 PRG='magiic'
-VERSION='0.3'
+VERSION='0.3.1'
 
 #==================== FUNCTIONS
 MENU() # Main menu
@@ -37,22 +37,35 @@ MENU() # Main menu
 
   the_menu=$(
         dialog                                 \
+        --item-help                            \
         --stdout                               \
         --title "Menu"                         \
         --backtitle "$PRG Version ${VERSION}." \
         --cancel-button "Exit"                 \
         --menu  "\nWelcome to $PRG, a slackpkg frontend...\n\nSelect one of the following operations:" \
-        10 60 0                                                \
-        'Mirror'    'List of mirrors'                          \
-        'Check'     'Check for system updates'                 \
-        'Update'    'Update the mirror'                        \
-        'Clean'     'List all unofficial packages for removal' \
-        'Info'      'Check package information'                \
-        'Search'    'Search for a package'                     \
-        'Install'   'Install a new package'                    \
-        'Reinstall' 'Reinstall package'                        \
-        'Remove'    'Remove a package'                         \
-        'Upgrade'   'Upgrade packages'
+        10 70 0                                                                                        \
+        'Mirror'      'List of mirrors'                                               \
+                      'archive in: /etc/slackpkg/mirrors'                             \
+        'Check'       'Check for system updates'                                      \
+                      'slackpkg check-updates'                                        \
+        'Update'      'Update the mirror'                                             \
+                      'slackpkg update'                                               \
+        'Clean'       'List all unofficial packages for removal'                      \
+                      'slackpkg clean-system'                                         \
+        'Info'        'Check package information'                                     \
+                      'slackpkg info'                                                 \
+        'Search'      'Search for a package'                                          \
+                      'slackpkg search package'                                       \
+        'Install'     'Install a new package'                                         \
+                      'slackpkg install package'                                      \
+        'Install-new' 'Install packages that were added to Slackware.'                \
+                      'slackpkg install-new'                                          \
+        'Reinstall'   'Reinstall package'                                             \
+                      'slackpkg reinstall package'                                    \
+        'Remove'      'Remove a package'                                              \
+                      'slackpkg remove package'                                       \
+        'Upgrade'     'Upgrade packages'                                              \
+                      'slackpkg upgrade-all'
   )
   case $? in
       1) exit 0          ;;
@@ -186,6 +199,12 @@ INSTALL() # Install package
     ENTER
 }
 
+INSTALL_NEW() # Install-new
+{
+   slackpkg install-new
+   ENTER
+}
+
 REINSTALL() # Reinstall package(s)
 {
     local reinstall_pkg=$(
@@ -261,6 +280,9 @@ while true ;do
         ;;
         Install)
             INSTALL
+        ;;
+        Install-new)
+            INSTALL_NEW
         ;;
         Reinstall)
             REINSTALL
